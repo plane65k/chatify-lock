@@ -15,12 +15,7 @@
             --secondary-background: #fafafa;
             --border-color: #ccc;
             --shadow-color: rgba(0,0,0,0.2);
-            --message-my-background: #4caf50;
-            --message-my-text: #ffffff;
-            --message-other-background: #e0e0e0;
-            --message-other-text: #000000;
             --overlay-background: rgba(0,0,0,0.4);
-            --transition-time: 2s;
         }
         [data-theme="dark"] {
             --background-color: #1a1a1a;
@@ -31,10 +26,6 @@
             --secondary-background: #333333;
             --border-color: #555555;
             --shadow-color: rgba(255,255,255,0.1);
-            --message-my-background: #45a049;
-            --message-my-text: #ffffff;
-            --message-other-background: #4a4a4a;
-            --message-other-text: #ffffff;
             --overlay-background: rgba(255,255,255,0.2);
         }
         *{box-sizing:border-box}
@@ -42,12 +33,11 @@
             height:100%;margin:0;
             font-family:Roboto,system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
             background:var(--background-color);color:var(--text-color);
-            transition:background-color var(--transition-time) ease,color var(--transition-time) ease;
+            transition:background-color 2s ease,color 2s ease;
             display:flex;flex-direction:column;overflow:hidden;
-            user-select:none;-webkit-user-select:none;
         }
 
-        /* ---------- Intro animation (Chatify Google) ---------- */
+        /* ---------- Intro animation ---------- */
         .white-overlay {
             position: fixed;top:0;left:0;width:100%;height:100%;
             background:white;z-index:1000;
@@ -67,88 +57,50 @@
         .text {
             font-size:52px;font-weight:700;color:#222;letter-spacing:2px;opacity:0;
             animation:textReveal 0.4s ease-out 0.7s forwards;
-            transition:color 0.8s cubic-bezier(0.4,0,0.2,1);
             white-space:nowrap;
         }
         [data-theme="dark"] .text {color:#949494}
         @keyframes textReveal {0%{opacity:0;transform:translateX(-100%)}100%{opacity:1;transform:translateX(0)}}
         .flash {animation:flashLogo 1s ease-in-out forwards}
         @keyframes flashLogo {0%,100%{opacity:1}50%{opacity:0}}
-        .transition-overlay {
-            position:fixed;top:0;left:0;width:100%;height:100%;
-            background:var(--button-background);z-index:10000;transform:scale(0);
-            border-radius:50%;transform-origin:center;pointer-events:none;
-        }
-        .transition-overlay.expand {animation:expandButton 2.8s cubic-bezier(0.4,0,0.2,1) forwards}
-        @keyframes expandButton {0%{transform:scale(0);border-radius:50%}50%{transform:scale(3);border-radius:30%}100%{transform:scale(10);border-radius:0}}
 
-        /* ---------- Login / Lock screen (Chatify public style) ---------- */
-        #pinOverlay {
-            position: fixed;inset:0;display:flex;align-items:center;justify-content:center;
-            background: var(--background-color);z-index:100;padding:60px 20px;
+        /* ---------- Main lock UI ---------- */
+        #lockScreen {
+            position: fixed;
+            inset: 0;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #000;
+            padding: 30px 20px;
+            text-align: center;
+            font-family: Roboto, system-ui, sans-serif;
         }
-        #pinOverlay.hidden { display: none !important; }
-        #pinBox {
-            display:flex;background:var(--card-background);border-radius:28px;
-            width:92%;max-width:780px;min-height:400px;max-height:85vh;
-            box-shadow:0 25px 60px rgba(0,0,0,0.2);overflow:hidden;
-            border:1px solid var(--border-color);
+        #lockScreen.hidden { display: none; }
+
+        .lock-logo {
+            width: 64px;
+            height: 64px;
+            border-radius: 16px;
+            margin-bottom: 20px;
+            object-fit: contain;
+            filter: drop-shadow(0 0 20px rgba(76,175,80,0.35));
         }
-        .pin-left {
-            flex:1 1 50%;padding:32px;display:flex;flex-direction:column;
-            justify-content:center;background:var(--card-background);min-width:260px;
-            overflow-y:auto;
+        .lock-title {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+            color: #fff;
         }
-        .pin-left .logo-area {display:flex;align-items:center;gap:10px;margin-bottom:18px}
-        .pin-left .logo-area img {height:36px;width:auto}
-        .pin-left .logo-area h1 {font-size:24px;font-weight:700;color:var(--text-color);margin:0}
-        .pin-left .welcome-text {font-size:13px;color:var(--text-color);opacity:0.7;margin-bottom:16px;line-height:1.5}
-        .pin-left .input-group {margin-bottom:10px}
-        .pin-left .input-group label {display:block;font-size:11px;font-weight:600;color:var(--text-color);margin-bottom:3px;opacity:0.8}
-        .pin-left .input-group input {
-            width:100%;padding:10px 14px;border-radius:12px;border:2px solid var(--border-color);
-            background:var(--secondary-background);color:var(--text-color);font-size:14px;
-            transition:border-color 0.25s,box-shadow 0.25s;box-sizing:border-box;
-        }
-        .pin-left .input-group input:focus {outline:none;border-color:var(--button-background);box-shadow:0 0 0 3px rgba(76,175,80,0.12)}
-        #pinBtn {
-            width:100%;padding:12px;border-radius:30px;font-size:15px;font-weight:600;
-            margin-top:4px;background:var(--button-background);color:var(--button-text);
-            border:none;cursor:pointer;transition:all 0.25s;letter-spacing:0.3px;
-        }
-        #pinBtn:hover:not(:disabled) {transform:translateY(-1px);box-shadow:0 6px 20px rgba(76,175,80,0.3)}
-        #pinBtn:disabled {opacity:0.65;cursor:wait}
-        .setup-box {
-            margin:8px 0 12px 0;border:1px solid var(--border-color);border-radius:10px;
-            padding:10px 12px;max-height:220px;overflow-y:auto;
-            background:var(--secondary-background);font-size:11px;line-height:1.6;
-        }
-        .setup-box code {background:rgba(0,0,0,.08);padding:1px 4px;border-radius:4px;font-size:10px;word-break:break-all}
-        [data-theme="dark"] .setup-box code {background:rgba(255,255,255,.1)}
-        .setup-box ol {padding-left:18px;margin:6px 0}
-        .setup-box summary {cursor:pointer;font-weight:700;font-size:12px;margin-bottom:6px}
-        .pin-right {
-            flex:1 1 50%;padding:0;display:flex;flex-direction:column;justify-content:center;
-            align-items:center;background:linear-gradient(145deg,#2e7d32 0%,#1b5e20 50%,#0d3b0f 100%);
-            color:white;text-align:center;position:relative;overflow:hidden;min-width:220px;min-height:300px;
-            border-radius:0 28px 28px 0;
-        }
-        .pin-right::before {
-            content:'';position:absolute;inset:0;
-            background:url('https://i.pinimg.com/736x/97/5c/51/975c519ab0bec63a622623ae129681ef.jpg') center/cover;
-            opacity:0.2;z-index:0;border-radius:inherit;
-        }
-        .pin-right .brand-content {position:relative;z-index:1;padding:28px 24px;max-width:320px}
-        .pin-right h2 {font-size:1.8rem;font-weight:800;margin:0 0 6px 0;letter-spacing:-0.5px;text-shadow:0 2px 20px rgba(0,0,0,0.2)}
-        .pin-right .tagline {font-size:0.9rem;opacity:0.85;margin:0 0 14px 0}
-        .pin-right .brand-footer {position:relative;z-index:1;margin-top:14px;font-size:10px;opacity:0.4;letter-spacing:0.5px}
-        @media (max-width:768px) {
-            #pinBox {flex-direction:column;width:95%;max-height:95vh;border-radius:24px;min-height:auto;max-width:100%}
-            .pin-left {padding:28px 20px;min-width:unset;flex:none;order:2;overflow-y:auto}
-            .pin-right {flex:none;min-height:180px;padding:24px 16px;border-radius:24px 24px 0 0;order:1;min-width:unset}
-            .pin-right h2 {font-size:1.5rem}
-            .text {font-size:34px}
-            .circle {width:90px;height:90px}
+        .lock-sub {
+            font-size: 13px;
+            color: rgba(255,255,255,0.55);
+            margin-bottom: 24px;
+            max-width: 340px;
+            line-height: 1.5;
         }
 
         /* Scanning animation */
@@ -161,7 +113,7 @@
             align-items: center;
             justify-content: center;
             position: relative;
-            margin: 0 auto 20px auto;
+            margin-bottom: 24px;
             overflow: hidden;
             background: radial-gradient(circle at center, rgba(76,175,80,0.08), transparent 70%);
         }
@@ -191,85 +143,132 @@
             box-shadow: 0 0 40px rgba(76,175,80,0.5);
         }
         #scanWrap.success::after { display: none; }
-        #scanWrap.alerting {
-            animation: pulseLock 0.8s ease-in-out infinite;
-            border-color: #e53935;
-        }
-        @keyframes pulseLock {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.04); }
-        }
 
         /* Status text */
         #statusText {
-            font-size: 13px;
-            color: var(--text-color);
-            opacity: 0.7;
+            font-size: 14px;
+            color: rgba(255,255,255,0.55);
             min-height: 20px;
-            margin-bottom: 14px;
+            margin-bottom: 20px;
             transition: color 0.3s;
-            text-align: center;
         }
-        #statusText.error { color: #e53935; opacity: 1; }
-        #lockSub {
-            font-size: 12px;
-            color: var(--text-color);
-            opacity: 0.6;
-            margin-bottom: 14px;
-            text-align: center;
-            line-height: 1.5;
-        }
+        #statusText.error { color: #e53935; }
 
-        /* PIN area on lock screen */
-        #lockPinArea {
+        /* PIN area */
+        #pinArea {
+            width: min(280px, 80vw);
             display: flex;
             flex-direction: column;
-            gap: 8px;
-            width: 100%;
+            gap: 10px;
+            align-items: center;
         }
-        #lockPinInput {
+        #pinInput {
             width: 100%;
-            padding: 10px 14px;
-            border-radius: 12px;
-            border: 2px solid var(--border-color);
-            background: var(--secondary-background);
-            color: var(--text-color);
-            font-size: 18px;
-            letter-spacing: 6px;
+            padding: 14px 18px;
+            border-radius: 30px;
+            border: 2px solid #2a2a2a;
+            background: #111;
+            color: #fff;
+            font-size: 22px;
+            letter-spacing: 8px;
             text-align: center;
             outline: none;
             transition: border-color 0.25s, box-shadow 0.25s;
         }
-        #lockPinInput:focus {
+        #pinInput:focus {
             border-color: var(--button-background);
-            box-shadow: 0 0 0 3px rgba(76,175,80,0.12);
+            box-shadow: 0 0 0 4px rgba(76,175,80,0.12);
         }
-        #lockPinInput::placeholder {
-            font-size: 12px;
+        #pinInput::placeholder {
+            font-size: 13px;
             letter-spacing: 1px;
-            color: var(--text-color);
-            opacity: 0.4;
+            color: #555;
         }
-        #lockPinBtn {
+        #pinBtn {
             width: 100%;
-            padding: 12px;
+            padding: 13px;
             border-radius: 30px;
             border: none;
             background: var(--button-background);
-            color: var(--button-text);
+            color: #fff;
             font-size: 15px;
-            font-weight: 600;
+            font-weight: 700;
             cursor: pointer;
-            letter-spacing: 0.3px;
-            transition: all 0.25s;
+            letter-spacing: 0.5px;
+            transition: transform 0.15s, box-shadow 0.2s;
         }
-        #lockPinBtn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(76,175,80,0.3); }
-        #lockPinError {
-            font-size: 11px;
+        #pinBtn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(76,175,80,0.35); }
+        #pinBtn:active { transform: translateY(0); }
+        #pinError {
+            font-size: 12px;
             color: #e53935;
-            min-height: 14px;
-            text-align: center;
+            min-height: 16px;
+            margin-top: 2px;
         }
+
+        /* Setup screen */
+        #setupScreen {
+            position: fixed;
+            inset: 0;
+            z-index: 11000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #000;
+            padding: 30px 20px;
+            text-align: center;
+            font-family: Roboto, system-ui, sans-serif;
+        }
+        #setupScreen.hidden { display: none; }
+        #setupVideoWrap {
+            width: min(300px, 80vw);
+            aspect-ratio: 4/3;
+            border-radius: 20px;
+            overflow: hidden;
+            border: 3px solid var(--button-background);
+            background: #111;
+            margin: 20px 0;
+            position: relative;
+        }
+        #setupVideo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+        .setup-btn {
+            padding: 13px 28px;
+            border-radius: 30px;
+            border: none;
+            background: var(--button-background);
+            color: #fff;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+        .setup-btn:disabled { opacity: 0.5; cursor: wait; }
+        .setup-btn.secondary {
+            background: transparent;
+            border: 1px solid #2a2a2a;
+            color: rgba(255,255,255,0.55);
+            font-weight: 500;
+        }
+        #setupPinInput {
+            margin-top: 16px;
+            padding: 12px 18px;
+            border-radius: 24px;
+            border: 2px solid #2a2a2a;
+            background: #111;
+            color: #fff;
+            font-size: 18px;
+            letter-spacing: 6px;
+            text-align: center;
+            width: 180px;
+            outline: none;
+        }
+        #setupPinInput:focus { border-color: var(--button-background); }
 
         /* Alert banner */
         #alertBanner {
@@ -297,14 +296,34 @@
         }
         #alertBanner.show { display: block; }
 
-        /* Hidden video for face-api */
-        #hiddenVideo {
+        /* Permission notice */
+        #permissionNotice {
             position: fixed;
-            width: 1px;
-            height: 1px;
-            opacity: 0;
-            pointer-events: none;
-            top: -9999px;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #141414;
+            border: 1px solid #2a2a2a;
+            border-radius: 16px;
+            padding: 16px 20px;
+            font-size: 12px;
+            color: rgba(255,255,255,0.55);
+            max-width: 340px;
+            text-align: center;
+            line-height: 1.5;
+            z-index: 10001;
+            display: none;
+        }
+        #permissionNotice button {
+            margin-top: 10px;
+            padding: 8px 20px;
+            border-radius: 20px;
+            border: none;
+            background: var(--button-background);
+            color: #fff;
+            font-weight: 600;
+            font-size: 12px;
+            cursor: pointer;
         }
 
         /* Fullscreen button */
@@ -315,52 +334,22 @@
             z-index: 10002;
             padding: 8px 16px;
             border-radius: 20px;
-            border: 1px solid var(--border-color);
-            background: var(--card-background);
-            color: var(--text-color);
+            border: 1px solid #2a2a2a;
+            background: rgba(20,20,20,0.8);
+            color: #fff;
             font-size: 12px;
             font-weight: 600;
             cursor: pointer;
-            box-shadow: 0 4px 12px var(--shadow-color);
+            backdrop-filter: blur(8px);
         }
-        #fullscreenBtn:hover { background: var(--secondary-background); }
-
-        /* Camera permission prompt */
-        #permissionNotice {
-            position: fixed;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: var(--card-background);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            padding: 16px 20px;
-            font-size: 12px;
-            color: var(--text-color);
-            max-width: 340px;
-            text-align: center;
-            line-height: 1.5;
-            z-index: 10001;
-            box-shadow: 0 8px 24px var(--shadow-color);
-        }
-        #permissionNotice button {
-            margin-top: 10px;
-            padding: 8px 20px;
-            border-radius: 20px;
-            border: none;
-            background: var(--button-background);
-            color: var(--button-text);
-            font-weight: 600;
-            font-size: 12px;
-            cursor: pointer;
-        }
+        #fullscreenBtn:hover { background: #141414; }
 
         /* Unlocked state */
         #unlockedContent {
             position: fixed;
             inset: 0;
             z-index: 1;
-            display: none;
+            display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
@@ -368,6 +357,7 @@
             color: var(--text-color);
             text-align: center;
             gap: 12px;
+            font-family: Roboto, system-ui, sans-serif;
         }
         #unlockedContent .logo-lg {
             width: 100px;
@@ -377,16 +367,13 @@
         }
         #unlockedContent h1 {
             font-size: 28px;
-            color: var(--text-color);
             letter-spacing: 1px;
-            margin: 0;
         }
         #unlockedContent p {
             font-size: 14px;
             max-width: 360px;
             line-height: 1.6;
-            opacity: 0.7;
-            margin: 0;
+            opacity: 0.6;
         }
         #relockBtn {
             margin-top: 18px;
@@ -394,152 +381,82 @@
             border-radius: 30px;
             border: none;
             background: var(--button-background);
-            color: var(--button-text);
+            color: #fff;
             font-size: 14px;
             font-weight: 700;
             cursor: pointer;
-            letter-spacing: 0.3px;
         }
         #relockBtn:hover { box-shadow: 0 8px 24px rgba(76,175,80,0.35); }
 
-        /* Setup screen */
-        #setupScreen {
+        /* Hidden video for face-api */
+        #hiddenVideo {
             position: fixed;
-            inset: 0;
-            z-index: 11000;
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: var(--background-color);
-            color: var(--text-color);
-            padding: 30px 20px;
-            text-align: center;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+            pointer-events: none;
+            top: -9999px;
         }
-        #setupVideoWrap {
-            width: min(300px, 80vw);
-            aspect-ratio: 4/3;
-            border-radius: 20px;
-            overflow: hidden;
-            border: 3px solid var(--button-background);
-            background: #111;
-            margin: 20px 0;
-            position: relative;
+
+        /* Pulse for attention */
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.04); }
         }
-        #setupVideo {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transform: scaleX(-1);
-        }
-        .setup-btn {
-            padding: 13px 28px;
-            border-radius: 30px;
-            border: none;
-            background: var(--button-background);
-            color: var(--button-text);
-            font-weight: 700;
-            font-size: 14px;
-            cursor: pointer;
-            margin-top: 8px;
-        }
-        .setup-btn:disabled { opacity: 0.5; cursor: wait; }
-        .setup-btn.secondary {
-            background: transparent;
-            border: 1px solid var(--border-color);
-            color: var(--text-color);
-            font-weight: 500;
-            opacity: 0.8;
-        }
-        #setupPinInput {
-            margin-top: 16px;
-            padding: 12px 18px;
-            border-radius: 24px;
-            border: 2px solid var(--border-color);
-            background: var(--secondary-background);
-            color: var(--text-color);
-            font-size: 18px;
-            letter-spacing: 6px;
-            text-align: center;
-            width: 180px;
-            outline: none;
-        }
-        #setupPinInput:focus { border-color: var(--button-background); }
-        #setupStatus {
-            font-size: 12px;
-            color: var(--text-color);
-            opacity: 0.6;
-            margin-top: 12px;
-            min-height: 16px;
+        #scanWrap.alerting {
+            animation: pulse 0.8s ease-in-out infinite;
+            border-color: #e53935;
         }
     </style>
 </head>
 <body>
 
-<!-- Intro -->
-<div class="transition-overlay" id="transitionOverlay"></div>
+<!-- Intro animation -->
 <div class="white-overlay" id="whiteOverlay"></div>
 <div class="intro" id="intro">
     <div class="circle"></div>
     <div class="text" id="chatifyText">Chatify Lock</div>
 </div>
 
-<!-- Unlocked content (visible only after unlock) -->
-<div id="unlockedContent">
+<!-- Unlocked content -->
+<div id="unlockedContent" style="display:none;">
     <img class="logo-lg" src="https://res.cloudinary.com/dceqg5cky/image/upload/SDG_log-removebg-preview_bslq5d.png" alt="Chatify Lock" />
     <h1>Chatify Lock</h1>
     <p>Your session is unlocked. The lock will re-engage if you switch tabs or after inactivity.</p>
     <button id="relockBtn">🔒 Re-lock Now</button>
 </div>
 
-<!-- Main lock screen (Chatify-Google style) -->
-<div id="pinOverlay">
-    <div id="pinBox">
-        <div class="pin-left">
-            <div class="logo-area">
-                <img src="https://res.cloudinary.com/dceqg5cky/image/upload/SDG_log-removebg-preview_bslq5d.png" alt="Chatify Lock" />
-                <h1>Chatify Lock</h1>
-            </div>
-            <p class="welcome-text" id="lockSub">Look at the camera to unlock, or enter your PIN below.</p>
+<!-- Main lock screen -->
+<div id="lockScreen">
+    <img class="lock-logo" src="https://res.cloudinary.com/dceqg5cky/image/upload/SDG_log-removebg-preview_bslq5d.png" alt="Chatify Lock" />
+    <div class="lock-title">Chatify Lock</div>
+    <div class="lock-sub" id="lockSub">Look at the camera to unlock, or enter your PIN below.</div>
 
-            <div style="display:flex;justify-content:center;">
-                <div id="scanWrap">
-                    <img id="scanImg" src="https://res.cloudinary.com/dceqg5cky/image/upload/v1792976629/output-onlinepngtools_ccsiv8.png" alt="scanning" />
-                </div>
-            </div>
+    <div id="scanWrap">
+        <img id="scanImg" src="https://res.cloudinary.com/dceqg5cky/image/upload/v1792976629/output-onlinepngtools_ccsiv8.png" alt="scanning" />
+    </div>
 
-            <div id="statusText">Initializing camera…</div>
+    <div id="statusText">Initializing camera…</div>
 
-            <div id="lockPinArea" class="input-group">
-                <label>Backup PIN</label>
-                <input id="lockPinInput" type="password" inputmode="numeric" maxlength="8" placeholder="Enter PIN" autocomplete="off" />
-            </div>
-            <button id="lockPinBtn">Unlock with PIN</button>
-            <div id="lockPinError"></div>
-        </div>
-        <div class="pin-right">
-            <div class="brand-content">
-                <h2>Secured by Chatify</h2>
-                <p class="tagline">Face ID + PIN. Your tab, your rules.</p>
-                <img src="https://res.cloudinary.com/dceqg5cky/image/upload/v1785015423/download_2_zo0yb2.png" alt="title" style="width:260px;height:auto;margin-top:10px;" />
-            </div>
-            <div class="brand-footer">© 2026 Chatify Lock • v1.0</div>
-        </div>
+    <div id="pinArea">
+        <input id="pinInput" type="password" inputmode="numeric" maxlength="8" placeholder="Enter PIN" autocomplete="off" />
+        <button id="pinBtn">Unlock with PIN</button>
+        <div id="pinError"></div>
     </div>
 </div>
 
-<!-- Setup screen (first run / face not enrolled) -->
-<div id="setupScreen">
-    <img src="https://res.cloudinary.com/dceqg5cky/image/upload/SDG_log-removebg-preview_bslq5d.png" alt="Chatify Lock" style="width:56px;height:56px;object-fit:contain;margin-bottom:12px;" />
-    <div style="font-size:22px;font-weight:700;margin-bottom:6px;">Set Up Chatify Lock</div>
-    <div style="font-size:13px;opacity:0.7;max-width:380px;line-height:1.5;">Enroll your face and set a backup PIN. This is stored only on this device.</div>
+<!-- Setup screen -->
+<div id="setupScreen" class="hidden">
+    <img class="lock-logo" src="https://res.cloudinary.com/dceqg5cky/image/upload/SDG_log-removebg-preview_bslq5d.png" alt="Chatify Lock" />
+    <div class="lock-title">Set Up Chatify Lock</div>
+    <div class="lock-sub">Enroll your face and set a backup PIN. This is stored only on this device.</div>
     <div id="setupVideoWrap">
         <video id="setupVideo" autoplay muted playsinline></video>
     </div>
     <button class="setup-btn" id="setupCaptureBtn">📸 Capture Face</button>
     <input id="setupPinInput" type="password" inputmode="numeric" maxlength="8" placeholder="4–8 digit PIN" />
     <button class="setup-btn secondary" id="setupSkipFaceBtn">Skip Face, Use PIN Only</button>
-    <div id="setupStatus"></div>
+    <div id="setupStatus" style="font-size:12px;color:rgba(255,255,255,0.55);margin-top:12px;min-height:16px;"></div>
 </div>
 
 <!-- Hidden video for continuous face detection -->
@@ -549,7 +466,7 @@
 <div id="alertBanner">⚠️ No eyes detected — look at the camera!</div>
 
 <!-- Camera permission notice -->
-<div id="permissionNotice" style="display:none;">
+<div id="permissionNotice">
     <div>📷 Camera access is needed for Face ID.</div>
     <button id="grantCameraBtn">Enable Camera</button>
 </div>
@@ -590,21 +507,17 @@
     let setupMode = false;
     let autoRelockOnHide = true;
     let alertBannerTimeout = null;
-    let alertRepeatInterval = null;
-    let tabOpenAttempts = 0;
-    let tabOpenMaxAttempts = 3;
-    let popupBlockedNotice = false;
 
     /* ============================================================
        DOM References
        ============================================================ */
-    const pinOverlay     = document.getElementById('pinOverlay');
+    const lockScreen     = document.getElementById('lockScreen');
     const scanWrap       = document.getElementById('scanWrap');
     const scanImg        = document.getElementById('scanImg');
     const statusText     = document.getElementById('statusText');
-    const lockPinInput   = document.getElementById('lockPinInput');
-    const lockPinBtn     = document.getElementById('lockPinBtn');
-    const lockPinError   = document.getElementById('lockPinError');
+    const pinInput       = document.getElementById('pinInput');
+    const pinBtn         = document.getElementById('pinBtn');
+    const pinError       = document.getElementById('pinError');
     const alertBanner    = document.getElementById('alertBanner');
     const permissionNotice = document.getElementById('permissionNotice');
     const grantCameraBtn = document.getElementById('grantCameraBtn');
@@ -612,7 +525,6 @@
     const hiddenVideo    = document.getElementById('hiddenVideo');
     const unlockedContent = document.getElementById('unlockedContent');
     const relockBtn      = document.getElementById('relockBtn');
-    const lockSub        = document.getElementById('lockSub');
 
     const setupScreen    = document.getElementById('setupScreen');
     const setupVideo     = document.getElementById('setupVideo');
@@ -620,6 +532,7 @@
     const setupPinInput  = document.getElementById('setupPinInput');
     const setupStatus    = document.getElementById('setupStatus');
     const setupSkipFaceBtn = document.getElementById('setupSkipFaceBtn');
+    const lockSub        = document.getElementById('lockSub');
 
     /* ============================================================
        Load face-api.js
@@ -702,7 +615,7 @@
     }
 
     /* ============================================================
-       Aggressive alert system
+       Alert banner
        ============================================================ */
     function showAlert(text) {
         alertBanner.textContent = text;
@@ -713,104 +626,47 @@
         try { window.focus(); } catch (e) {}
         if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
     }
-
-    function startRepeatingAlerts() {
-        if (alertRepeatInterval) return;
-        // Show immediately
-        showAlert('⚠️ LOCKED — Look at the camera to unlock!');
-        // Repeat every 2 seconds while locked & no eyes
-        alertRepeatInterval = setInterval(() => {
-            if (!locked || !enabled) { stopRepeatingAlerts(); return; }
-            showAlert('⚠️ LOCKED — Look at the camera to unlock!');
-        }, 2000);
-    }
-
-    function stopRepeatingAlerts() {
-        if (alertRepeatInterval) {
-            clearInterval(alertRepeatInterval);
-            alertRepeatInterval = null;
-        }
-    }
-
     function clearAlert() {
         alertBanner.classList.remove('show');
         clearTimeout(alertBannerTimeout);
         document.title = 'Chatify Lock';
         scanWrap.classList.remove('alerting');
         alertShown = false;
-        stopRepeatingAlerts();
     }
     alertBanner.addEventListener('click', () => alertBanner.classList.remove('show'));
-
-    /* ============================================================
-       Aggressive tab locking
-       ============================================================ */
-    function attemptOpenLockTab() {
-        if (popupBlockedNotice) return;
-        if (tabOpenAttempts >= tabOpenMaxAttempts) {
-            // Show a notice if popups are blocked
-            if (!popupBlockedNotice) {
-                popupBlockedNotice = true;
-                showAlert('⚠️ Popup blocked! Please allow popups or stay on this tab. LOCKED.');
-            }
-            return;
-        }
-        tabOpenAttempts++;
-        try {
-            const win = window.open(window.location.href, '_blank', 'width=500,height=700,menubar=no,toolbar=no');
-            if (!win || win.closed || typeof win.closed === 'undefined') {
-                // Popup blocked
-                popupBlockedNotice = true;
-                showAlert('⚠️ Popup blocked! Please allow popups or stay on this tab. LOCKED.');
-                return;
-            }
-            // Focus the new tab back to this one so it's the "locking" tab
-            setTimeout(() => {
-                try { window.focus(); } catch (e) {}
-            }, 100);
-        } catch (e) {
-            popupBlockedNotice = true;
-            showAlert('⚠️ Could not open lock tab. Stay on this page. LOCKED.');
-        }
-    }
 
     /* ============================================================
        Lock / Unlock visuals
        ============================================================ */
     function showLock() {
-        if (locked && pinOverlay.style.display !== 'none') return;
+        if (locked && lockScreen.style.display !== 'none') return;
         locked = true;
-        pinOverlay.classList.remove('hidden');
-        pinOverlay.style.display = 'flex';
+        lockScreen.classList.remove('hidden');
+        lockScreen.style.display = 'flex';
         unlockedContent.style.display = 'none';
         scanImg.src = SCAN_IMG;
         scanWrap.classList.add('scanning');
         scanWrap.classList.remove('success', 'alerting');
         statusText.textContent = 'Scanning…';
         statusText.classList.remove('error');
-        lockPinInput.value = '';
-        lockPinError.textContent = '';
+        pinInput.value = '';
+        pinError.textContent = '';
         document.title = 'Chatify Lock';
-        // Try to aggressively open a lock tab if not already attempted
-        if (tabOpenAttempts < tabOpenMaxAttempts && !popupBlockedNotice) {
-            setTimeout(attemptOpenLockTab, 500);
-        }
     }
 
     function hideLock() {
         locked = false;
-        pinOverlay.style.display = 'none';
+        lockScreen.style.display = 'none';
         unlockedContent.style.display = 'flex';
         scanWrap.classList.remove('scanning', 'alerting');
         clearAlert();
         document.title = 'Chatify Lock — Unlocked';
-        tabOpenAttempts = 0;
-        popupBlockedNotice = false;
     }
 
     function showSetup() {
         setupMode = true;
-        pinOverlay.style.display = 'none';
+        lockScreen.style.display = 'none';
+        setupScreen.classList.remove('hidden');
         setupScreen.style.display = 'flex';
         startSetupCamera();
     }
@@ -906,7 +762,7 @@
                         if (Date.now() - noEyesSince > NO_EYES_ALERT_DELAY_MS && !alertShown) {
                             alertShown = true;
                             scanWrap.classList.add('alerting');
-                            startRepeatingAlerts();
+                            showAlert('⚠️ No eyes detected — look at the camera to unlock!');
                         }
                     } else {
                         noEyesSince = 0;
@@ -945,7 +801,8 @@
             statusText.textContent = msg;
             statusText.classList.add('error');
             lockSub.textContent = 'Face ID unavailable — use your PIN below.';
-            lockPinInput.focus();
+            pinInput.focus();
+            permissionNotice.style.display = 'block';
             if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
         }
     }
@@ -964,30 +821,29 @@
         if (loopId) { cancelAnimationFrame(loopId); loopId = null; }
         if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
         hiddenVideo.srcObject = null;
-        stopRepeatingAlerts();
         hideLock();
     }
 
     /* ============================================================
        PIN Unlock
        ============================================================ */
-    lockPinBtn.addEventListener('click', () => {
-        const val = (lockPinInput.value || '').trim();
+    pinBtn.addEventListener('click', () => {
+        const val = (pinInput.value || '').trim();
         if (!storedPin) {
-            lockPinError.textContent = 'No PIN set. Please complete setup.';
+            pinError.textContent = 'No PIN set. Please complete setup.';
             return;
         }
         if (val === storedPin) {
-            lockPinError.textContent = '';
+            pinError.textContent = '';
             triggerUnlockAnimation();
         } else {
-            lockPinError.textContent = 'Incorrect PIN. Try again.';
-            lockPinInput.value = '';
-            lockPinInput.focus();
+            pinError.textContent = 'Incorrect PIN. Try again.';
+            pinInput.value = '';
+            pinInput.focus();
         }
     });
-    lockPinInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') { e.preventDefault(); lockPinBtn.click(); }
+    pinInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); pinBtn.click(); }
     });
 
     /* ============================================================
@@ -1088,7 +944,7 @@
         } catch (err) {
             statusText.textContent = 'Camera permission denied. Use PIN.';
             statusText.classList.add('error');
-            lockPinInput.focus();
+            pinInput.focus();
         }
     }
     grantCameraBtn.addEventListener('click', requestCameraPermission);
@@ -1130,7 +986,7 @@
     });
 
     /* ============================================================
-       Boot
+       Initial boot
        ============================================================ */
     async function boot() {
         storedDescriptor = loadDescriptor();
@@ -1157,7 +1013,7 @@
             statusText.textContent = msg + ' Use your PIN below.';
             statusText.classList.add('error');
             lockSub.textContent = 'Face ID unavailable — enter your PIN.';
-            lockPinInput.focus();
+            pinInput.focus();
             permissionNotice.style.display = 'block';
         }
     }
@@ -1165,7 +1021,7 @@
     boot();
 
     /* ============================================================
-       Aggressive tab locking: focus trap & prevent close
+       Prevent leaving the page easily
        ============================================================ */
     window.addEventListener('beforeunload', (e) => {
         if (locked) {
@@ -1178,12 +1034,7 @@
     document.addEventListener('keydown', (e) => {
         if (locked && e.key === 'Tab') {
             e.preventDefault();
-            lockPinInput.focus();
-        }
-        // Block common escape shortcuts while locked
-        if (locked && (e.ctrlKey || e.metaKey) && ['w', 'W', 't', 'T', 'n', 'N'].includes(e.key)) {
-            e.preventDefault();
-            showAlert('⚠️ Tab is locked! Unlock first.');
+            pinInput.focus();
         }
     });
 
@@ -1192,19 +1043,17 @@
     });
 
     /* ============================================================
-       Expose helpers
+       Expose helpers for debugging
        ============================================================ */
     window.__chatifyLock = {
         lock: showLock,
         unlock: () => triggerUnlockAnimation(),
         disable,
         enable,
-        getState: () => ({ locked, enabled, hasFace: !!storedDescriptor, hasPin: !!storedPin }),
-        startAlerts: startRepeatingAlerts,
-        stopAlerts: stopRepeatingAlerts
+        getState: () => ({ locked, enabled, hasFace: !!storedDescriptor, hasPin: !!storedPin })
     };
 
-    console.log('🔒 Chatify Lock ready — aggressive locking enabled');
+    console.log('🔒 Chatify Lock ready');
 })();
 </script>
 </body>
