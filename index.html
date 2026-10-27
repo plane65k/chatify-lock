@@ -24,7 +24,7 @@
       font-family: Roboto, system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
       background: #111;
       color: #fff;
-      overflow: hidden; /* prevent scroll – fullscreen feel */
+      overflow: hidden;
       height: 100vh;
       width: 100vw;
     }
@@ -320,9 +320,44 @@
       z-index: 5;
       pointer-events: none;
     }
+    /* fullscreen prompt overlay */
+    #fullscreenPrompt {
+      position: fixed;
+      inset: 0;
+      z-index: 100010;
+      background: rgba(0, 0, 0, 0.85);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 16px;
+      color: #fff;
+      text-align: center;
+      padding: 20px;
+    }
+    #fullscreenPrompt.active {
+      display: flex;
+    }
+    #fullscreenPrompt button {
+      padding: 12px 32px;
+      border-radius: 30px;
+      border: 0;
+      background: var(--green);
+      color: #fff;
+      font-weight: 700;
+      font-size: 16px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
+
+  <!-- Fullscreen prompt -->
+  <div id="fullscreenPrompt">
+    <h2 style="margin:0;font-size:20px;">Chatify Lock needs fullscreen</h2>
+    <p style="margin:0;font-size:13px;opacity:.7;max-width:340px;">To keep the lock secure, please allow fullscreen mode.</p>
+    <button id="fullscreenBtn">Enter Fullscreen</button>
+  </div>
 
   <!-- Fullscreen lock overlay -->
   <div id="lockScreen">
@@ -394,6 +429,8 @@
       const pinInput = document.getElementById('pinInput');
       const pinBtn = document.getElementById('pinBtn');
       const pinError = document.getElementById('pinError');
+      const fullscreenPrompt = document.getElementById('fullscreenPrompt');
+      const fullscreenBtn = document.getElementById('fullscreenBtn');
 
       const setupPanel = document.getElementById('setupPanel');
       const setupVideo = document.getElementById('setupVideo');
@@ -407,20 +444,76 @@
       const toast = document.getElementById('toast');
 
       // ---- state ----
-      let stream = null;                // camera for hiddenVideo (lock scanning)
-      let setupStream = null;           // camera for setup
+      let stream = null;
+      let setupStream = null;
       let loopId = null;
       let modelsLoaded = false;
       let faceApiReady = false;
-      let enabled = false;              // lock active?
-      let locked = true;                // lock screen visible
+      let enabled = false;
+      let locked = true;
       let unlocking = false;
       let holdStart = 0;
       let storedDescriptor = null;
       let storedPin = null;
       let disabledByPin = false;
-      let alertInterval = null;         // for tab attention
-      let lastEyesDetected = true;      // track to avoid spam
+      let alertInterval = null;
+      let lastEyesDetected = true;
+
+      // ---- notification permission ----
+      let notificationsGranted = false;
+      async function requestNotificationPermission() {
+        if (!('Notification' in window)) return false;
+        if (Notification.permission === 'granted') { notificationsGranted = true; return true; }
+        if (Notification.permission === 'denied') return false;
+        const perm = await Notification.requestPermission();
+        notificationsGranted = (perm === 'granted');
+        return notificationsGranted;
+      }
+
+      // ---- send notification ----
+      function sendNotification(title, body) {
+        if (!notificationsGranted) return;
+        try {
+          new Notification(title, {
+            body: body,
+            icon: SCAN_IMG,
+            tag: 'chatify-lock'
+          });
+        } catch (e) { console.warn('Notification failed:', e); }
+      }
+
+      // ---- fullscreen helpers ----
+      async function requestFullscreen() {
+        try {
+          const el = document.documentElement;
+          if (el.requestFullscreen) await el.requestFullscreen();
+          else if (el.webkitRequestFullscreen) await el.webkitRequestFullscreen();
+          else if (el.msRequestFullscreen) await el.msRequestFullscreen();
+          fullscreenPrompt.classList.remove('active');
+          return true;
+        } catch (e) {
+          console.warn('Fullscreen failed:', e);
+          return false;
+        }
+      }
+
+      function isFullscreen() {
+        return !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
+      }
+
+      // listen for fullscreen change – if exits, prompt again while locked
+      document.addEventListener('fullscreenchange', () => {
+        if (!isFullscreen() && enabled && locked) {
+          fullscreenPrompt.classList.add('active');
+        }
+      });
+      document.addEventListener('webkitfullscreenchange', () => {
+        if (!isFullscreen() && enabled && locked) {
+          fullscreenPrompt.classList.add('active');
+        }
+      });
+
+      fullscreenBtn.addEventListener('click', requestFullscreen);
 
       // ---- helpers ----
       function loadFaceApiScript() {
@@ -490,7 +583,7 @@
         return { descriptor: result.descriptor, eyesOpen: left > 0.18 && right > 0.18 };
       }
 
-      // ---- attention alert (tab title + toast) ----
+      // ---- attention alert (tab title + toast + notification) ----
       function triggerAttentionAlert() {
         // tab title blink
         if (alertInterval) clearInterval(alertInterval);
@@ -499,7 +592,7 @@
         alertInterval = setInterval(() => {
           document.title = (count % 2 === 0) ? '⚠️ EYES NOT DETECTED ⚠️' : originalTitle;
           count++;
-          if (count > 8) { // stop after ~4 seconds
+          if (count > 8) {
             clearInterval(alertInterval);
             alertInterval = null;
             document.title = originalTitle;
@@ -510,9 +603,12 @@
         toast.classList.add('show');
         setTimeout(() => toast.classList.remove('show'), 2500);
 
-        // body flash (attention)
+        // body flash
         document.body.classList.add('attention-flash');
         setTimeout(() => document.body.classList.remove('attention-flash'), 2000);
+
+        // push notification
+        sendNotification('Chatify Lock Alert', 'Eyes not detected — face the camera to unlock.');
       }
 
       // ---- lock screen control ----
@@ -523,9 +619,11 @@
         lockAnimImg.src = SCAN_IMG;
         lockAnim.classList.add('show');
         pinWrap.style.display = storedPin ? 'flex' : 'none';
-        // clear errors
         pinError.textContent = '';
         pinInput.value = '';
+
+        // prompt fullscreen if not already
+        if (!isFullscreen()) fullscreenPrompt.classList.add('active');
       }
 
       function hideLock() {
@@ -535,6 +633,7 @@
         pinWrap.style.display = 'none';
         pinInput.value = '';
         pinError.textContent = '';
+        fullscreenPrompt.classList.remove('active');
       }
 
       function unlockAnimation() {
@@ -562,10 +661,9 @@
             const matched = !!(detected && eyesVisible &&
               distance(storedDescriptor, detected.descriptor) < MATCH_THRESHOLD);
 
-            // --- attention alert if eyes not detected while locked ---
+            // attention alert if eyes not detected while locked
             if (!eyesVisible && locked && !unlocking) {
               if (lastEyesDetected) {
-                // only trigger alert when transitioning from eyes-open to closed
                 triggerAttentionAlert();
                 lastEyesDetected = false;
               }
@@ -601,8 +699,11 @@
           await loadModels();
           enabled = true;
           showLock();
-          lastEyesDetected = true; // reset
+          lastEyesDetected = true;
           scanLoop();
+
+          // request notification permission
+          await requestNotificationPermission();
         } catch (error) {
           setupStatus.textContent = 'Could not enable lock: ' + (error.message || error);
           if (stream) stream.getTracks().forEach(t => t.stop());
@@ -620,10 +721,12 @@
         stream = null;
         hiddenVideo.srcObject = null;
         hideLock();
-        // clear any attention alert
         if (alertInterval) { clearInterval(alertInterval); alertInterval = null; }
         document.title = 'Chatify Lock · Face + PIN';
         document.body.classList.remove('attention-flash');
+        if (document.fullscreenElement) {
+          document.exitFullscreen().catch(() => {});
+        }
       }
 
       // ---- setup flow ----
@@ -753,24 +856,7 @@
         }
       });
 
-      // ---- auto-start: if nothing stored, show setup; else start lock ----
-      (async function init() {
-        // load faceapi in background
-        loadFaceApiScript().catch(() => {});
-
-        storedDescriptor = loadDescriptor();
-        storedPin = loadPin();
-
-        if (!storedDescriptor || !storedPin) {
-          // no credentials – open setup immediately
-          await showSetup();
-        } else {
-          // already set up – start lock right away
-          await startLock();
-        }
-      })();
-
-      // prevent leaving page easily (optional extra: beforeunload)
+      // prevent leaving page
       window.addEventListener('beforeunload', (e) => {
         if (enabled && locked) {
           e.preventDefault();
@@ -778,6 +864,28 @@
           return e.returnValue;
         }
       });
+
+      // ---- auto-start ----
+      (async function init() {
+        loadFaceApiScript().catch(() => {});
+        storedDescriptor = loadDescriptor();
+        storedPin = loadPin();
+
+        if (!storedDescriptor || !storedPin) {
+          await showSetup();
+        } else {
+          await startLock();
+        }
+
+        // Try to request fullscreen on first user interaction
+        const tryFullscreen = () => {
+          if (enabled && locked && !isFullscreen()) {
+            fullscreenPrompt.classList.add('active');
+          }
+          document.removeEventListener('click', tryFullscreen);
+        };
+        document.addEventListener('click', tryFullscreen);
+      })();
 
     })();
   </script>
