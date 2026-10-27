@@ -1,1060 +1,785 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Chatify Lock</title>
-    <link rel="icon" type="image/png" href="https://res.cloudinary.com/dceqg5cky/image/upload/SDG_log-removebg-preview_bslq5d.png" />
-    <style>
-        :root {
-            --background-color: #f5f5f5;
-            --text-color: #333333;
-            --card-background: #ffffff;
-            --button-background: #4caf50;
-            --button-text: #ffffff;
-            --secondary-background: #fafafa;
-            --border-color: #ccc;
-            --shadow-color: rgba(0,0,0,0.2);
-            --overlay-background: rgba(0,0,0,0.4);
-        }
-        [data-theme="dark"] {
-            --background-color: #1a1a1a;
-            --text-color: #ffffff;
-            --card-background: #2c2c2c;
-            --button-background: #45a049;
-            --button-text: #ffffff;
-            --secondary-background: #333333;
-            --border-color: #555555;
-            --shadow-color: rgba(255,255,255,0.1);
-            --overlay-background: rgba(255,255,255,0.2);
-        }
-        *{box-sizing:border-box}
-        html,body{
-            height:100%;margin:0;
-            font-family:Roboto,system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
-            background:var(--background-color);color:var(--text-color);
-            transition:background-color 2s ease,color 2s ease;
-            display:flex;flex-direction:column;overflow:hidden;
-        }
-
-        /* ---------- Intro animation ---------- */
-        .white-overlay {
-            position: fixed;top:0;left:0;width:100%;height:100%;
-            background:white;z-index:1000;
-            transition:background-color 0.8s cubic-bezier(0.4,0,0.2,1);
-        }
-        .intro {
-            position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
-            display:flex;align-items:center;gap:20px;z-index:1001;
-        }
-        .circle {
-            width:140px;height:140px;background:#34a853;border-radius:50%;transform:scale(3);
-            animation:circleRise 1.02s ease-in-out forwards, moveRight 0.24s ease-out 0.91s forwards;
-            flex-shrink:0;
-        }
-        @keyframes circleRise {0%{transform:scale(7.75)}100%{transform:translateX(30%) scale(1)}}
-        @keyframes moveRight {0%{transform:translateX(10%) scale(1)}100%{transform:translateX(0px) scale(1)}}
-        .text {
-            font-size:52px;font-weight:700;color:#222;letter-spacing:2px;opacity:0;
-            animation:textReveal 0.4s ease-out 0.7s forwards;
-            white-space:nowrap;
-        }
-        [data-theme="dark"] .text {color:#949494}
-        @keyframes textReveal {0%{opacity:0;transform:translateX(-100%)}100%{opacity:1;transform:translateX(0)}}
-        .flash {animation:flashLogo 1s ease-in-out forwards}
-        @keyframes flashLogo {0%,100%{opacity:1}50%{opacity:0}}
-
-        /* ---------- Main lock UI ---------- */
-        #lockScreen {
-            position: fixed;
-            inset: 0;
-            z-index: 10000;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: #000;
-            padding: 30px 20px;
-            text-align: center;
-            font-family: Roboto, system-ui, sans-serif;
-        }
-        #lockScreen.hidden { display: none; }
-
-        .lock-logo {
-            width: 64px;
-            height: 64px;
-            border-radius: 16px;
-            margin-bottom: 20px;
-            object-fit: contain;
-            filter: drop-shadow(0 0 20px rgba(76,175,80,0.35));
-        }
-        .lock-title {
-            font-size: 22px;
-            font-weight: 700;
-            letter-spacing: 0.5px;
-            margin-bottom: 6px;
-            color: #fff;
-        }
-        .lock-sub {
-            font-size: 13px;
-            color: rgba(255,255,255,0.55);
-            margin-bottom: 24px;
-            max-width: 340px;
-            line-height: 1.5;
-        }
-
-        /* Scanning animation */
-        #scanWrap {
-            width: 180px;
-            height: 180px;
-            border-radius: 50%;
-            border: 3px solid rgba(76,175,80,0.25);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            margin-bottom: 24px;
-            overflow: hidden;
-            background: radial-gradient(circle at center, rgba(76,175,80,0.08), transparent 70%);
-        }
-        #scanWrap.scanning::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 3px;
-            background: linear-gradient(90deg, transparent, var(--button-background), transparent);
-            animation: scanLine 1.8s ease-in-out infinite;
-        }
-        @keyframes scanLine {
-            0%   { transform: translateY(0); opacity: 0.2; }
-            50%  { opacity: 1; }
-            100% { transform: translateY(177px); opacity: 0.2; }
-        }
-        #scanWrap img {
-            width: 140px;
-            height: 140px;
-            object-fit: contain;
-            transition: transform 0.2s;
-        }
-        #scanWrap.success {
-            border-color: var(--button-background);
-            box-shadow: 0 0 40px rgba(76,175,80,0.5);
-        }
-        #scanWrap.success::after { display: none; }
-
-        /* Status text */
-        #statusText {
-            font-size: 14px;
-            color: rgba(255,255,255,0.55);
-            min-height: 20px;
-            margin-bottom: 20px;
-            transition: color 0.3s;
-        }
-        #statusText.error { color: #e53935; }
-
-        /* PIN area */
-        #pinArea {
-            width: min(280px, 80vw);
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            align-items: center;
-        }
-        #pinInput {
-            width: 100%;
-            padding: 14px 18px;
-            border-radius: 30px;
-            border: 2px solid #2a2a2a;
-            background: #111;
-            color: #fff;
-            font-size: 22px;
-            letter-spacing: 8px;
-            text-align: center;
-            outline: none;
-            transition: border-color 0.25s, box-shadow 0.25s;
-        }
-        #pinInput:focus {
-            border-color: var(--button-background);
-            box-shadow: 0 0 0 4px rgba(76,175,80,0.12);
-        }
-        #pinInput::placeholder {
-            font-size: 13px;
-            letter-spacing: 1px;
-            color: #555;
-        }
-        #pinBtn {
-            width: 100%;
-            padding: 13px;
-            border-radius: 30px;
-            border: none;
-            background: var(--button-background);
-            color: #fff;
-            font-size: 15px;
-            font-weight: 700;
-            cursor: pointer;
-            letter-spacing: 0.5px;
-            transition: transform 0.15s, box-shadow 0.2s;
-        }
-        #pinBtn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(76,175,80,0.35); }
-        #pinBtn:active { transform: translateY(0); }
-        #pinError {
-            font-size: 12px;
-            color: #e53935;
-            min-height: 16px;
-            margin-top: 2px;
-        }
-
-        /* Setup screen */
-        #setupScreen {
-            position: fixed;
-            inset: 0;
-            z-index: 11000;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: #000;
-            padding: 30px 20px;
-            text-align: center;
-            font-family: Roboto, system-ui, sans-serif;
-        }
-        #setupScreen.hidden { display: none; }
-        #setupVideoWrap {
-            width: min(300px, 80vw);
-            aspect-ratio: 4/3;
-            border-radius: 20px;
-            overflow: hidden;
-            border: 3px solid var(--button-background);
-            background: #111;
-            margin: 20px 0;
-            position: relative;
-        }
-        #setupVideo {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transform: scaleX(-1);
-        }
-        .setup-btn {
-            padding: 13px 28px;
-            border-radius: 30px;
-            border: none;
-            background: var(--button-background);
-            color: #fff;
-            font-weight: 700;
-            font-size: 14px;
-            cursor: pointer;
-            margin-top: 8px;
-        }
-        .setup-btn:disabled { opacity: 0.5; cursor: wait; }
-        .setup-btn.secondary {
-            background: transparent;
-            border: 1px solid #2a2a2a;
-            color: rgba(255,255,255,0.55);
-            font-weight: 500;
-        }
-        #setupPinInput {
-            margin-top: 16px;
-            padding: 12px 18px;
-            border-radius: 24px;
-            border: 2px solid #2a2a2a;
-            background: #111;
-            color: #fff;
-            font-size: 18px;
-            letter-spacing: 6px;
-            text-align: center;
-            width: 180px;
-            outline: none;
-        }
-        #setupPinInput:focus { border-color: var(--button-background); }
-
-        /* Alert banner */
-        #alertBanner {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 10005;
-            background: #e53935;
-            color: #fff;
-            padding: 14px 24px;
-            border-radius: 30px;
-            font-size: 13px;
-            font-weight: 600;
-            display: none;
-            box-shadow: 0 8px 30px rgba(229,57,53,0.4);
-            cursor: pointer;
-            max-width: 90vw;
-            text-align: center;
-            animation: alertIn 0.35s ease;
-        }
-        @keyframes alertIn {
-            from { opacity: 0; transform: translate(-50%, -12px); }
-            to   { opacity: 1; transform: translate(-50%, 0); }
-        }
-        #alertBanner.show { display: block; }
-
-        /* Permission notice */
-        #permissionNotice {
-            position: fixed;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #141414;
-            border: 1px solid #2a2a2a;
-            border-radius: 16px;
-            padding: 16px 20px;
-            font-size: 12px;
-            color: rgba(255,255,255,0.55);
-            max-width: 340px;
-            text-align: center;
-            line-height: 1.5;
-            z-index: 10001;
-            display: none;
-        }
-        #permissionNotice button {
-            margin-top: 10px;
-            padding: 8px 20px;
-            border-radius: 20px;
-            border: none;
-            background: var(--button-background);
-            color: #fff;
-            font-weight: 600;
-            font-size: 12px;
-            cursor: pointer;
-        }
-
-        /* Fullscreen button */
-        #fullscreenBtn {
-            position: fixed;
-            top: 16px;
-            right: 16px;
-            z-index: 10002;
-            padding: 8px 16px;
-            border-radius: 20px;
-            border: 1px solid #2a2a2a;
-            background: rgba(20,20,20,0.8);
-            color: #fff;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            backdrop-filter: blur(8px);
-        }
-        #fullscreenBtn:hover { background: #141414; }
-
-        /* Unlocked state */
-        #unlockedContent {
-            position: fixed;
-            inset: 0;
-            z-index: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: var(--background-color);
-            color: var(--text-color);
-            text-align: center;
-            gap: 12px;
-            font-family: Roboto, system-ui, sans-serif;
-        }
-        #unlockedContent .logo-lg {
-            width: 100px;
-            height: 100px;
-            object-fit: contain;
-            opacity: 0.9;
-        }
-        #unlockedContent h1 {
-            font-size: 28px;
-            letter-spacing: 1px;
-        }
-        #unlockedContent p {
-            font-size: 14px;
-            max-width: 360px;
-            line-height: 1.6;
-            opacity: 0.6;
-        }
-        #relockBtn {
-            margin-top: 18px;
-            padding: 12px 28px;
-            border-radius: 30px;
-            border: none;
-            background: var(--button-background);
-            color: #fff;
-            font-size: 14px;
-            font-weight: 700;
-            cursor: pointer;
-        }
-        #relockBtn:hover { box-shadow: 0 8px 24px rgba(76,175,80,0.35); }
-
-        /* Hidden video for face-api */
-        #hiddenVideo {
-            position: fixed;
-            width: 1px;
-            height: 1px;
-            opacity: 0;
-            pointer-events: none;
-            top: -9999px;
-        }
-
-        /* Pulse for attention */
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.04); }
-        }
-        #scanWrap.alerting {
-            animation: pulse 0.8s ease-in-out infinite;
-            border-color: #e53935;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <title>Chatify Lock · Face + PIN</title>
+  <link rel="icon" type="image/png" href="https://res.cloudinary.com/dceqg5cky/image/upload/v1792976629/output-onlinepngtools_ccsiv8.png">
+  <style>
+    :root {
+      color-scheme: dark;
+      --green: #4caf50;
+      --bg: #000;
+      --panel: #1a1a1a;
+      --muted: #aaa;
+      --alert: #e53935;
+    }
+    * {
+      box-sizing: border-box;
+      user-select: none;
+    }
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      font-family: Roboto, system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
+      background: #111;
+      color: #fff;
+      overflow: hidden; /* prevent scroll – fullscreen feel */
+      height: 100vh;
+      width: 100vw;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    /* ----- full lock overlay (covers everything) ----- */
+    #lockScreen {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      background: #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding-top: 40px;
+      transition: opacity 0.25s;
+    }
+    #lockScreen.hidden {
+      display: none;
+    }
+    .lock-title {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      opacity: 0.85;
+      margin: 0;
+      text-align: center;
+      width: 90%;
+      pointer-events: none;
+    }
+    .lock-anim {
+      margin-top: 0;
+      width: 60px;
+      height: 60px;
+      display: block;
+      animation: faceIdPop 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .lock-anim img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      transform: scale(1.2);
+    }
+    @keyframes faceIdPop {
+      from { transform: scale(0.6); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    /* pin area at bottom */
+    #pinWrap {
+      position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      width: min(260px, 80vw);
+    }
+    #pinInput {
+      width: 100%;
+      padding: 10px 16px;
+      border-radius: 22px;
+      border: 1px solid #555;
+      background: #111;
+      color: #fff;
+      font-size: 18px;
+      letter-spacing: 6px;
+      text-align: center;
+      outline: none;
+    }
+    #pinInput:focus {
+      border-color: var(--green);
+    }
+    #pinBtn {
+      padding: 8px 20px;
+      border: 1px solid #555;
+      border-radius: 22px;
+      background: transparent;
+      color: #bbb;
+      font-weight: 500;
+      font-size: 12px;
+      cursor: pointer;
+      letter-spacing: 0.4px;
+    }
+    #pinError {
+      font-size: 11px;
+      color: #ff8a80;
+      min-height: 14px;
+    }
+    /* hidden video for continuous face scan */
+    #hiddenVideo {
+      position: fixed;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+      top: -9999px;
+    }
+    /* setup panel – we keep minimal but functional */
+    #setupPanel {
+      position: fixed;
+      inset: 0;
+      z-index: 100000;
+      background: #000;
+      color: #fff;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 30px 20px;
+      text-align: center;
+      overflow-y: auto;
+    }
+    #setupPanel.active {
+      display: flex;
+    }
+    #setupPanel h2 {
+      font-size: 22px;
+      font-weight: 700;
+      margin: 0 0 8px;
+    }
+    #setupPanel p {
+      font-size: 13px;
+      opacity: 0.7;
+      max-width: 380px;
+      margin: 0 0 20px;
+      line-height: 1.5;
+    }
+    .video-wrap {
+      position: relative;
+      width: min(320px, 80vw);
+      aspect-ratio: 4/3;
+      border-radius: 18px;
+      overflow: hidden;
+      border: 3px solid var(--green);
+      background: #111;
+    }
+    #setupVideo {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+    }
+    .setup-btn {
+      margin-top: 22px;
+      padding: 12px 26px;
+      border-radius: 30px;
+      border: 0;
+      background: var(--green);
+      color: #fff;
+      font-weight: 700;
+      font-size: 15px;
+      cursor: pointer;
+      letter-spacing: 0.3px;
+    }
+    .setup-btn:disabled {
+      opacity: 0.6;
+      cursor: wait;
+    }
+    .pin-setup {
+      margin-top: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    #setupPinInput {
+      padding: 10px 16px;
+      border-radius: 22px;
+      border: 1px solid #555;
+      background: #111;
+      color: #fff;
+      font-size: 16px;
+      letter-spacing: 4px;
+      text-align: center;
+      outline: none;
+      width: 160px;
+    }
+    #setupPinInput:focus {
+      border-color: var(--green);
+    }
+    .hint {
+      font-size: 11px;
+      opacity: 0.6;
+    }
+    #setupStatus {
+      margin-top: 14px;
+      font-size: 12px;
+      opacity: 0.8;
+      max-width: 90vw;
+    }
+    /* reset modal */
+    #resetChoice {
+      position: fixed;
+      inset: 0;
+      z-index: 100002;
+      display: none;
+      background: rgba(0, 0, 0, 0.75);
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    #resetChoice.active {
+      display: flex;
+    }
+    .reset-box {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 20px;
+      padding: 24px;
+      max-width: 340px;
+      width: 100%;
+      text-align: center;
+    }
+    .reset-box h3 {
+      margin: 0 0 6px;
+      font-size: 17px;
+    }
+    .reset-box p {
+      font-size: 12px;
+      opacity: 0.65;
+      margin: 0 0 18px;
+      line-height: 1.5;
+    }
+    .reset-box button {
+      display: block;
+      width: 100%;
+      margin: 8px 0;
+      padding: 11px;
+      border-radius: 24px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 0;
+    }
+    #resetFaceBtn { background: var(--green); color: #fff; }
+    #resetPinBtn, #resetCancel { background: transparent; color: #fff; border: 1px solid #555 !important; }
+    #resetBothBtn { background: var(--alert); color: #fff; }
+    #resetCancel { color: #aaa; border: 0 !important; }
+    /* attention flash for tab */
+    body.attention-flash::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: rgba(229, 57, 53, 0.15);
+      z-index: 100001;
+      pointer-events: none;
+      animation: flashAlert 0.8s ease-in-out infinite alternate;
+    }
+    @keyframes flashAlert {
+      from { opacity: 0.2; }
+      to { opacity: 0.6; }
+    }
+    /* tiny toast when eyes not detected */
+    #toast {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #e53935;
+      color: #fff;
+      padding: 10px 24px;
+      border-radius: 30px;
+      font-size: 13px;
+      font-weight: 600;
+      z-index: 100005;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    }
+    #toast.show {
+      opacity: 1;
+    }
+    /* small desktop hint */
+    .debug-hint {
+      position: fixed;
+      bottom: 8px;
+      right: 12px;
+      font-size: 10px;
+      color: #444;
+      z-index: 5;
+      pointer-events: none;
+    }
+  </style>
 </head>
 <body>
 
-<!-- Intro animation -->
-<div class="white-overlay" id="whiteOverlay"></div>
-<div class="intro" id="intro">
-    <div class="circle"></div>
-    <div class="text" id="chatifyText">Chatify Lock</div>
-</div>
-
-<!-- Unlocked content -->
-<div id="unlockedContent" style="display:none;">
-    <img class="logo-lg" src="https://res.cloudinary.com/dceqg5cky/image/upload/SDG_log-removebg-preview_bslq5d.png" alt="Chatify Lock" />
-    <h1>Chatify Lock</h1>
-    <p>Your session is unlocked. The lock will re-engage if you switch tabs or after inactivity.</p>
-    <button id="relockBtn">🔒 Re-lock Now</button>
-</div>
-
-<!-- Main lock screen -->
-<div id="lockScreen">
-    <img class="lock-logo" src="https://res.cloudinary.com/dceqg5cky/image/upload/SDG_log-removebg-preview_bslq5d.png" alt="Chatify Lock" />
-    <div class="lock-title">Chatify Lock</div>
-    <div class="lock-sub" id="lockSub">Look at the camera to unlock, or enter your PIN below.</div>
-
-    <div id="scanWrap">
-        <img id="scanImg" src="https://res.cloudinary.com/dceqg5cky/image/upload/v1792976629/output-onlinepngtools_ccsiv8.png" alt="scanning" />
+  <!-- Fullscreen lock overlay -->
+  <div id="lockScreen">
+    <h2 class="lock-title" id="lockTitle">Chatify Lock</h2>
+    <div class="lock-anim" id="lockAnim">
+      <img id="lockAnimImg" alt="Face scan animation" src="https://res.cloudinary.com/dceqg5cky/image/upload/v1792976629/output-onlinepngtools_ccsiv8.png">
     </div>
-
-    <div id="statusText">Initializing camera…</div>
-
-    <div id="pinArea">
-        <input id="pinInput" type="password" inputmode="numeric" maxlength="8" placeholder="Enter PIN" autocomplete="off" />
-        <button id="pinBtn">Unlock with PIN</button>
-        <div id="pinError"></div>
+    <div id="pinWrap">
+      <input id="pinInput" type="password" inputmode="numeric" maxlength="8" placeholder="PIN" aria-label="Backup PIN">
+      <button id="pinBtn">Unlock with PIN</button>
+      <div id="pinError" role="status"></div>
     </div>
-</div>
+  </div>
 
-<!-- Setup screen -->
-<div id="setupScreen" class="hidden">
-    <img class="lock-logo" src="https://res.cloudinary.com/dceqg5cky/image/upload/SDG_log-removebg-preview_bslq5d.png" alt="Chatify Lock" />
-    <div class="lock-title">Set Up Chatify Lock</div>
-    <div class="lock-sub">Enroll your face and set a backup PIN. This is stored only on this device.</div>
-    <div id="setupVideoWrap">
-        <video id="setupVideo" autoplay muted playsinline></video>
+  <!-- setup panel (only shown when user needs to enroll) -->
+  <div id="setupPanel">
+    <h2>Set Up Chatify Lock</h2>
+    <p>Look straight at the camera and tap Capture to enroll your face. A 4–8 digit PIN is required as backup.</p>
+    <div class="video-wrap">
+      <video id="setupVideo" autoplay muted playsinline></video>
     </div>
-    <button class="setup-btn" id="setupCaptureBtn">📸 Capture Face</button>
-    <input id="setupPinInput" type="password" inputmode="numeric" maxlength="8" placeholder="4–8 digit PIN" />
-    <button class="setup-btn secondary" id="setupSkipFaceBtn">Skip Face, Use PIN Only</button>
-    <div id="setupStatus" style="font-size:12px;color:rgba(255,255,255,0.55);margin-top:12px;min-height:16px;"></div>
-</div>
+    <div class="pin-setup">
+      <input id="setupPinInput" type="password" inputmode="numeric" maxlength="8" placeholder="4–8 digits" aria-label="Backup PIN">
+      <div class="hint">Required backup PIN</div>
+    </div>
+    <button class="setup-btn" id="setupBtn">Capture Face ID</button>
+    <button class="setup-btn" id="resetBtn" style="background:transparent; border:1px solid #555; margin-top:10px;">Reset Face ID / PIN</button>
+    <div id="setupStatus" role="status"></div>
+  </div>
 
-<!-- Hidden video for continuous face detection -->
-<video id="hiddenVideo" autoplay muted playsinline></video>
+  <!-- reset choice modal -->
+  <div id="resetChoice">
+    <div class="reset-box">
+      <h3>Reset Options</h3>
+      <p>Face ID and PIN are stored locally. Choose what to reset.</p>
+      <button id="resetFaceBtn">Reset Face ID only</button>
+      <button id="resetPinBtn">Reset PIN only</button>
+      <button id="resetBothBtn">Reset both</button>
+      <button id="resetCancel">Cancel</button>
+    </div>
+  </div>
 
-<!-- Alert banner -->
-<div id="alertBanner">⚠️ No eyes detected — look at the camera!</div>
+  <!-- Hidden video for continuous face scan -->
+  <video id="hiddenVideo" autoplay muted playsinline></video>
 
-<!-- Camera permission notice -->
-<div id="permissionNotice">
-    <div>📷 Camera access is needed for Face ID.</div>
-    <button id="grantCameraBtn">Enable Camera</button>
-</div>
+  <!-- Toast for eye detection alert -->
+  <div id="toast">👁️ Eyes not detected — face the camera</div>
 
-<!-- Fullscreen button -->
-<button id="fullscreenBtn">⛶ Fullscreen</button>
+  <!-- tiny hint -->
+  <div class="debug-hint">Chatify Lock · Face + PIN</div>
 
-<script>
-(function() {
-    'use strict';
+  <script>
+    (() => {
+      'use strict';
 
-    /* ============================================================
-       Constants & State
-       ============================================================ */
-    const SCAN_IMG    = 'https://res.cloudinary.com/dceqg5cky/image/upload/v1792976629/output-onlinepngtools_ccsiv8.png';
-    const SUCCESS_GIF = 'https://res.cloudinary.com/dceqg5cky/image/upload/v1792976703/output-onlinegiftools-ezgif.com-crop_1_lqligt.gif';
-    const MODEL_URL   = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights';
-    const FACE_KEY    = 'chatify_lock_face_descriptor';
-    const PIN_KEY     = 'chatify_lock_pin';
-    const MATCH_THRESHOLD = 0.6;
-    const EYE_OPEN_THRESHOLD = 0.18;
-    const HOLD_DURATION_MS = 1000;
-    const NO_EYES_ALERT_DELAY_MS = 3000;
+      // ---- assets ----
+      const SCAN_IMG = 'https://res.cloudinary.com/dceqg5cky/image/upload/v1792976629/output-onlinepngtools_ccsiv8.png';
+      const SUCCESS_GIF = 'https://res.cloudinary.com/dceqg5cky/image/upload/v1792976703/output-onlinegiftools-ezgif.com-crop_1_lqligt.gif';
+      const MODEL_URL = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights';
+      const FACE_KEY = 'chatify_face_descriptor';
+      const PIN_KEY = 'chatify_face_pin';
+      const MATCH_THRESHOLD = 0.6;
 
-    let locked = true;
-    let unlocking = false;
-    let enabled = true;
-    let stream = null;
-    let loopId = null;
-    let modelsLoaded = false;
-    let faceApiReady = false;
-    let storedDescriptor = null;
-    let storedPin = null;
-    let holdStart = 0;
-    let noEyesSince = 0;
-    let alertShown = false;
-    let setupStream = null;
-    let setupMode = false;
-    let autoRelockOnHide = true;
-    let alertBannerTimeout = null;
+      // ---- DOM ----
+      const lockScreen = document.getElementById('lockScreen');
+      const lockAnim = document.getElementById('lockAnim');
+      const lockAnimImg = document.getElementById('lockAnimImg');
+      const pinWrap = document.getElementById('pinWrap');
+      const pinInput = document.getElementById('pinInput');
+      const pinBtn = document.getElementById('pinBtn');
+      const pinError = document.getElementById('pinError');
 
-    /* ============================================================
-       DOM References
-       ============================================================ */
-    const lockScreen     = document.getElementById('lockScreen');
-    const scanWrap       = document.getElementById('scanWrap');
-    const scanImg        = document.getElementById('scanImg');
-    const statusText     = document.getElementById('statusText');
-    const pinInput       = document.getElementById('pinInput');
-    const pinBtn         = document.getElementById('pinBtn');
-    const pinError       = document.getElementById('pinError');
-    const alertBanner    = document.getElementById('alertBanner');
-    const permissionNotice = document.getElementById('permissionNotice');
-    const grantCameraBtn = document.getElementById('grantCameraBtn');
-    const fullscreenBtn  = document.getElementById('fullscreenBtn');
-    const hiddenVideo    = document.getElementById('hiddenVideo');
-    const unlockedContent = document.getElementById('unlockedContent');
-    const relockBtn      = document.getElementById('relockBtn');
+      const setupPanel = document.getElementById('setupPanel');
+      const setupVideo = document.getElementById('setupVideo');
+      const setupBtn = document.getElementById('setupBtn');
+      const resetBtn = document.getElementById('resetBtn');
+      const setupStatus = document.getElementById('setupStatus');
+      const setupPinInput = document.getElementById('setupPinInput');
 
-    const setupScreen    = document.getElementById('setupScreen');
-    const setupVideo     = document.getElementById('setupVideo');
-    const setupCaptureBtn = document.getElementById('setupCaptureBtn');
-    const setupPinInput  = document.getElementById('setupPinInput');
-    const setupStatus    = document.getElementById('setupStatus');
-    const setupSkipFaceBtn = document.getElementById('setupSkipFaceBtn');
-    const lockSub        = document.getElementById('lockSub');
+      const resetChoice = document.getElementById('resetChoice');
+      const hiddenVideo = document.getElementById('hiddenVideo');
+      const toast = document.getElementById('toast');
 
-    /* ============================================================
-       Load face-api.js
-       ============================================================ */
-    function loadFaceApiScript() {
+      // ---- state ----
+      let stream = null;                // camera for hiddenVideo (lock scanning)
+      let setupStream = null;           // camera for setup
+      let loopId = null;
+      let modelsLoaded = false;
+      let faceApiReady = false;
+      let enabled = false;              // lock active?
+      let locked = true;                // lock screen visible
+      let unlocking = false;
+      let holdStart = 0;
+      let storedDescriptor = null;
+      let storedPin = null;
+      let disabledByPin = false;
+      let alertInterval = null;         // for tab attention
+      let lastEyesDetected = true;      // track to avoid spam
+
+      // ---- helpers ----
+      function loadFaceApiScript() {
         return new Promise((resolve, reject) => {
-            if (window.faceapi) { faceApiReady = true; return resolve(true); }
-            const s = document.createElement('script');
-            s.src = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js';
-            s.onload = () => { faceApiReady = !!window.faceapi; resolve(faceApiReady); };
-            s.onerror = () => reject(new Error('Failed to load face-api.js'));
-            document.head.appendChild(s);
+          if (window.faceapi) { faceApiReady = true; resolve(true); return; }
+          const script = document.createElement('script');
+          script.src = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js';
+          script.onload = () => { faceApiReady = !!window.faceapi; resolve(faceApiReady); };
+          script.onerror = () => reject(new Error('Could not load face-api.js.'));
+          document.head.appendChild(script);
         });
-    }
-    async function loadModels() {
-        if (modelsLoaded) return true;
+      }
+
+      async function loadModels() {
+        if (modelsLoaded) return;
         await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
         await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
         await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
         modelsLoaded = true;
-        return true;
-    }
+      }
 
-    /* ============================================================
-       Helpers
-       ============================================================ */
-    function eyeAspectRatio(eye) {
+      async function getCamera() {
+        if (!navigator.mediaDevices?.getUserMedia) throw new Error('Camera access requires HTTPS or localhost.');
+        return navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 360 } }, audio: false
+        });
+      }
+
+      function loadDescriptor() {
+        try {
+          const raw = localStorage.getItem(FACE_KEY);
+          if (!raw) return null;
+          const arr = JSON.parse(raw);
+          return Array.isArray(arr) && arr.length === 128 ? new Float32Array(arr) : null;
+        } catch { return null; }
+      }
+
+      function saveDescriptor(desc) {
+        try { localStorage.setItem(FACE_KEY, JSON.stringify(Array.from(desc))); }
+        catch { setupStatus.textContent = 'Could not save Face ID in this browser.'; }
+      }
+
+      function loadPin() { try { return localStorage.getItem(PIN_KEY) || null; } catch { return null; } }
+      function savePin(pin) { try { localStorage.setItem(PIN_KEY, pin); } catch {} }
+
+      function distance(a, b) {
+        let sum = 0;
+        for (let i = 0; i < a.length; i++) { const d = a[i] - b[i]; sum += d * d; }
+        return Math.sqrt(sum);
+      }
+
+      function eyeAspectRatio(eye) {
         if (!eye || eye.length < 6) return 0;
         const d = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
-        const v1 = d(eye[1], eye[5]);
-        const v2 = d(eye[2], eye[4]);
-        const h  = d(eye[0], eye[3]);
+        const v1 = d(eye[1], eye[5]), v2 = d(eye[2], eye[4]), h = d(eye[0], eye[3]);
         return h ? (v1 + v2) / (2 * h) : 0;
-    }
-    function euclidean(a, b) {
-        let s = 0;
-        for (let i = 0; i < a.length; i++) { const d = a[i] - b[i]; s += d * d; }
-        return Math.sqrt(s);
-    }
+      }
 
-    function loadDescriptor() {
-        try {
-            const raw = localStorage.getItem(FACE_KEY);
-            if (!raw) return null;
-            const arr = JSON.parse(raw);
-            if (!Array.isArray(arr) || arr.length !== 128) return null;
-            return new Float32Array(arr);
-        } catch (e) { return null; }
-    }
-    function saveDescriptor(desc) {
-        try { localStorage.setItem(FACE_KEY, JSON.stringify(Array.from(desc))); } catch (e) {}
-    }
-    function loadPin() {
-        try { return localStorage.getItem(PIN_KEY) || null; } catch (e) { return null; }
-    }
-    function savePin(pin) {
-        try { localStorage.setItem(PIN_KEY, pin); } catch (e) {}
-    }
-
-    async function getCamera() {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            throw new Error('Camera API not available (needs HTTPS or localhost).');
-        }
-        return await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 360 } },
-            audio: false
-        });
-    }
-
-    async function detectDescriptor(video) {
+      async function detectDescriptor(video) {
         if (!window.faceapi || !video || video.readyState !== 4) return null;
-        const res = await faceapi
-            .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.4 }))
-            .withFaceLandmarks()
-            .withFaceDescriptor();
-        if (!res) return null;
-        const lEAR = eyeAspectRatio(res.landmarks.getLeftEye());
-        const rEAR = eyeAspectRatio(res.landmarks.getRightEye());
-        return { descriptor: res.descriptor, eyesOpen: lEAR > EYE_OPEN_THRESHOLD && rEAR > EYE_OPEN_THRESHOLD };
-    }
+        const result = await faceapi.detectSingleFace(video,
+          new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.4 }))
+          .withFaceLandmarks().withFaceDescriptor();
+        if (!result) return null;
+        const left = eyeAspectRatio(result.landmarks.getLeftEye());
+        const right = eyeAspectRatio(result.landmarks.getRightEye());
+        return { descriptor: result.descriptor, eyesOpen: left > 0.18 && right > 0.18 };
+      }
 
-    /* ============================================================
-       Alert banner
-       ============================================================ */
-    function showAlert(text) {
-        alertBanner.textContent = text;
-        alertBanner.classList.add('show');
-        clearTimeout(alertBannerTimeout);
-        alertBannerTimeout = setTimeout(() => alertBanner.classList.remove('show'), 6000);
-        document.title = '⚠️ ' + document.title.replace(/^⚠️ /, '');
-        try { window.focus(); } catch (e) {}
-        if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-    }
-    function clearAlert() {
-        alertBanner.classList.remove('show');
-        clearTimeout(alertBannerTimeout);
-        document.title = 'Chatify Lock';
-        scanWrap.classList.remove('alerting');
-        alertShown = false;
-    }
-    alertBanner.addEventListener('click', () => alertBanner.classList.remove('show'));
+      // ---- attention alert (tab title + toast) ----
+      function triggerAttentionAlert() {
+        // tab title blink
+        if (alertInterval) clearInterval(alertInterval);
+        let count = 0;
+        const originalTitle = 'Chatify Lock · Face + PIN';
+        alertInterval = setInterval(() => {
+          document.title = (count % 2 === 0) ? '⚠️ EYES NOT DETECTED ⚠️' : originalTitle;
+          count++;
+          if (count > 8) { // stop after ~4 seconds
+            clearInterval(alertInterval);
+            alertInterval = null;
+            document.title = originalTitle;
+          }
+        }, 500);
 
-    /* ============================================================
-       Lock / Unlock visuals
-       ============================================================ */
-    function showLock() {
-        if (locked && lockScreen.style.display !== 'none') return;
+        // toast message
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 2500);
+
+        // body flash (attention)
+        document.body.classList.add('attention-flash');
+        setTimeout(() => document.body.classList.remove('attention-flash'), 2000);
+      }
+
+      // ---- lock screen control ----
+      function showLock() {
+        if (locked) return;
         locked = true;
         lockScreen.classList.remove('hidden');
-        lockScreen.style.display = 'flex';
-        unlockedContent.style.display = 'none';
-        scanImg.src = SCAN_IMG;
-        scanWrap.classList.add('scanning');
-        scanWrap.classList.remove('success', 'alerting');
-        statusText.textContent = 'Scanning…';
-        statusText.classList.remove('error');
+        lockAnimImg.src = SCAN_IMG;
+        lockAnim.classList.add('show');
+        pinWrap.style.display = storedPin ? 'flex' : 'none';
+        // clear errors
+        pinError.textContent = '';
+        pinInput.value = '';
+      }
+
+      function hideLock() {
+        locked = false;
+        lockScreen.classList.add('hidden');
+        lockAnim.classList.remove('show');
+        pinWrap.style.display = 'none';
         pinInput.value = '';
         pinError.textContent = '';
-        document.title = 'Chatify Lock';
-    }
+      }
 
-    function hideLock() {
-        locked = false;
-        lockScreen.style.display = 'none';
-        unlockedContent.style.display = 'flex';
-        scanWrap.classList.remove('scanning', 'alerting');
-        clearAlert();
-        document.title = 'Chatify Lock — Unlocked';
-    }
-
-    function showSetup() {
-        setupMode = true;
-        lockScreen.style.display = 'none';
-        setupScreen.classList.remove('hidden');
-        setupScreen.style.display = 'flex';
-        startSetupCamera();
-    }
-    function hideSetup() {
-        setupMode = false;
-        setupScreen.style.display = 'none';
-        if (setupStream) { setupStream.getTracks().forEach(t => t.stop()); setupStream = null; }
-        setupVideo.srcObject = null;
-    }
-
-    async function startSetupCamera() {
-        setupStatus.textContent = 'Starting camera…';
-        setupCaptureBtn.disabled = true;
-        try {
-            if (setupStream) { setupStream.getTracks().forEach(t => t.stop()); setupStream = null; }
-            setupStream = await getCamera();
-            setupVideo.srcObject = setupStream;
-            await setupVideo.play();
-            if (!faceApiReady) await loadFaceApiScript();
-            await loadModels();
-            setupStatus.textContent = 'Look straight at the camera, then tap Capture.';
-            setupCaptureBtn.disabled = false;
-        } catch (err) {
-            setupStatus.textContent = 'Camera error: ' + (err.message || err);
-            setupCaptureBtn.disabled = true;
-        }
-    }
-
-    /* ============================================================
-       Unlock animation
-       ============================================================ */
-    function triggerUnlockAnimation() {
+      function unlockAnimation() {
         if (unlocking) return;
         unlocking = true;
-        scanWrap.classList.remove('alerting');
-        scanWrap.classList.add('success');
-        scanImg.src = SUCCESS_GIF;
-        statusText.textContent = 'Unlocked ✓';
-        statusText.classList.remove('error');
-        clearAlert();
+        lockAnimImg.src = SUCCESS_GIF;
+        lockAnim.classList.add('show');
         setTimeout(() => {
-            hideLock();
-            unlocking = false;
-            holdStart = 0;
-            noEyesSince = 0;
-        }, 1600);
-    }
+          hideLock();
+          unlocking = false;
+          holdStart = 0;
+          if (disabledByPin) { disabledByPin = false; disableLock(); }
+        }, 1800);
+      }
 
-    /* ============================================================
-       Scanning loop
-       ============================================================ */
-    async function scanLoop() {
-        if (!enabled || setupMode) {
-            loopId = requestAnimationFrame(scanLoop);
-            return;
-        }
-
-        if (unlocking) {
-            loopId = requestAnimationFrame(scanLoop);
-            return;
-        }
+      // ---- scan loop ----
+      async function scanLoop() {
+        if (!enabled) return;
+        if (unlocking) { loopId = requestAnimationFrame(scanLoop); return; }
 
         try {
-            if (!storedDescriptor && !storedPin) {
-                if (!setupMode) showSetup();
-                loopId = requestAnimationFrame(scanLoop);
-                return;
-            }
+          if (storedDescriptor) {
+            const detected = await detectDescriptor(hiddenVideo);
+            const eyesVisible = detected && detected.eyesOpen;
+            const matched = !!(detected && eyesVisible &&
+              distance(storedDescriptor, detected.descriptor) < MATCH_THRESHOLD);
 
-            if (storedDescriptor) {
-                const det = await detectDescriptor(hiddenVideo);
-                let matched = false;
-                let eyesOpen = false;
-
-                if (det) {
-                    eyesOpen = det.eyesOpen;
-                    if (eyesOpen) {
-                        matched = euclidean(storedDescriptor, det.descriptor) < MATCH_THRESHOLD;
-                    }
-                }
-
-                if (matched) {
-                    clearAlert();
-                    if (!locked) holdStart = 0;
-                    else if (!holdStart) holdStart = Date.now();
-                    else if (Date.now() - holdStart > HOLD_DURATION_MS) triggerUnlockAnimation();
-                } else {
-                    holdStart = 0;
-                    if (!locked) showLock();
-
-                    if (!eyesOpen) {
-                        if (!noEyesSince) noEyesSince = Date.now();
-                        if (Date.now() - noEyesSince > NO_EYES_ALERT_DELAY_MS && !alertShown) {
-                            alertShown = true;
-                            scanWrap.classList.add('alerting');
-                            showAlert('⚠️ No eyes detected — look at the camera to unlock!');
-                        }
-                    } else {
-                        noEyesSince = 0;
-                        if (alertShown) {
-                            alertShown = false;
-                            clearAlert();
-                        }
-                    }
-                }
+            // --- attention alert if eyes not detected while locked ---
+            if (!eyesVisible && locked && !unlocking) {
+              if (lastEyesDetected) {
+                // only trigger alert when transitioning from eyes-open to closed
+                triggerAttentionAlert();
+                lastEyesDetected = false;
+              }
             } else {
-                if (!locked) showLock();
+              lastEyesDetected = true;
             }
-        } catch (e) {}
+
+            if (matched) {
+              if (!locked) holdStart = 0;
+              else if (!holdStart) holdStart = Date.now();
+              else if (Date.now() - holdStart > 1000) unlockAnimation();
+            } else {
+              holdStart = 0;
+              if (!locked) showLock();
+            }
+          } else if (!storedPin && !locked) {
+            showLock();
+          }
+        } catch (error) { console.warn('Face scan error:', error); }
 
         loopId = requestAnimationFrame(scanLoop);
-    }
+      }
 
-    /* ============================================================
-       Enable / Disable
-       ============================================================ */
-    async function startEnabledFlow() {
+      // ---- start / stop lock ----
+      async function startLock() {
         try {
-            const s = await getCamera();
-            stream = s;
-            hiddenVideo.srcObject = s;
-            await hiddenVideo.play();
-            if (!faceApiReady) await loadFaceApiScript();
-            await loadModels();
-            enabled = true;
-            showLock();
-            scanLoop();
-        } catch (err) {
-            const msg = (err && err.name === 'NotAllowedError')
-                ? 'Camera permission denied. PIN unlock still works.'
-                : 'Camera error: ' + (err.message || err);
-            statusText.textContent = msg;
-            statusText.classList.add('error');
-            lockSub.textContent = 'Face ID unavailable — use your PIN below.';
-            pinInput.focus();
-            permissionNotice.style.display = 'block';
-            if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+          storedDescriptor = loadDescriptor();
+          storedPin = loadPin();
+          stream = await getCamera();
+          hiddenVideo.srcObject = stream;
+          await hiddenVideo.play();
+          if (!faceApiReady) await loadFaceApiScript();
+          await loadModels();
+          enabled = true;
+          showLock();
+          lastEyesDetected = true; // reset
+          scanLoop();
+        } catch (error) {
+          setupStatus.textContent = 'Could not enable lock: ' + (error.message || error);
+          if (stream) stream.getTracks().forEach(t => t.stop());
+          stream = null;
         }
-    }
+      }
 
-    async function enable() {
-        storedDescriptor = loadDescriptor();
-        storedPin = loadPin();
-        if (!storedDescriptor && !storedPin) { showSetup(); return; }
-        await startEnabledFlow();
-    }
-
-    function disable() {
+      function disableLock() {
         enabled = false;
         unlocking = false;
         holdStart = 0;
-        if (loopId) { cancelAnimationFrame(loopId); loopId = null; }
-        if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+        if (loopId) cancelAnimationFrame(loopId);
+        loopId = null;
+        if (stream) stream.getTracks().forEach(t => t.stop());
+        stream = null;
         hiddenVideo.srcObject = null;
         hideLock();
-    }
+        // clear any attention alert
+        if (alertInterval) { clearInterval(alertInterval); alertInterval = null; }
+        document.title = 'Chatify Lock · Face + PIN';
+        document.body.classList.remove('attention-flash');
+      }
 
-    /* ============================================================
-       PIN Unlock
-       ============================================================ */
-    pinBtn.addEventListener('click', () => {
-        const val = (pinInput.value || '').trim();
-        if (!storedPin) {
-            pinError.textContent = 'No PIN set. Please complete setup.';
-            return;
+      // ---- setup flow ----
+      async function showSetup() {
+        hideLock();
+        setupPanel.classList.add('active');
+        setupStatus.textContent = 'Starting camera…';
+        setupBtn.disabled = true;
+        setupBtn.textContent = 'Capture Face ID';
+        setupPinInput.value = loadPin() || '';
+        try {
+          if (setupStream) setupStream.getTracks().forEach(t => t.stop());
+          setupStream = await getCamera();
+          setupVideo.srcObject = setupStream;
+          await setupVideo.play();
+          if (!faceApiReady) await loadFaceApiScript();
+          await loadModels();
+          setupStatus.textContent = 'Look straight at the camera, then tap Capture.';
+          setupBtn.disabled = false;
+        } catch (error) {
+          setupStatus.textContent = 'Camera/setup error: ' + (error.message || error);
         }
-        if (val === storedPin) {
-            pinError.textContent = '';
-            triggerUnlockAnimation();
-        } else {
-            pinError.textContent = 'Incorrect PIN. Try again.';
-            pinInput.value = '';
-            pinInput.focus();
-        }
-    });
-    pinInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') { e.preventDefault(); pinBtn.click(); }
-    });
+      }
 
-    /* ============================================================
-       Re-lock button
-       ============================================================ */
-    relockBtn.addEventListener('click', () => {
-        if (!enabled) enable();
-        else showLock();
-    });
+      function closeSetup() {
+        setupPanel.classList.remove('active');
+        if (setupStream) setupStream.getTracks().forEach(t => t.stop());
+        setupStream = null;
+        setupVideo.srcObject = null;
+      }
 
-    /* ============================================================
-       Fullscreen
-       ============================================================ */
-    fullscreenBtn.addEventListener('click', () => {
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen().catch(() => {});
-        } else {
-            document.exitFullscreen().catch(() => {});
-        }
-    });
-
-    /* ============================================================
-       Setup screen events
-       ============================================================ */
-    setupCaptureBtn.addEventListener('click', async () => {
-        setupCaptureBtn.disabled = true;
-        setupCaptureBtn.textContent = 'Capturing…';
+      // ---- event listeners ----
+      setupBtn.addEventListener('click', async () => {
+        setupBtn.disabled = true;
+        setupBtn.textContent = 'Capturing…';
         setupStatus.textContent = 'Hold still…';
-
-        const pinVal = (setupPinInput.value || '').trim();
-        if (!/^\d{4,8}$/.test(pinVal)) {
-            setupStatus.textContent = 'A PIN of 4–8 digits is required.';
-            setupCaptureBtn.disabled = false;
-            setupCaptureBtn.textContent = '📸 Capture Face';
-            return;
+        const pin = (setupPinInput.value || '').trim();
+        if (!/^\d{4,8}$/.test(pin)) {
+          setupStatus.textContent = 'A PIN of 4–8 digits is required.';
+          setupBtn.disabled = false;
+          setupBtn.textContent = 'Capture Face ID';
+          return;
         }
-        savePin(pinVal);
-
+        savePin(pin);
         try {
-            await new Promise(r => setTimeout(r, 500));
-            const det = await detectDescriptor(setupVideo);
-            if (!det) {
-                setupStatus.textContent = 'No face detected — try again.';
-                setupCaptureBtn.disabled = false;
-                setupCaptureBtn.textContent = '📸 Capture Face';
-                return;
-            }
-            if (!det.eyesOpen) {
-                setupStatus.textContent = 'Open your eyes and try again.';
-                setupCaptureBtn.disabled = false;
-                setupCaptureBtn.textContent = '📸 Capture Face';
-                return;
-            }
-            storedDescriptor = det.descriptor;
-            storedPin = pinVal;
-            saveDescriptor(storedDescriptor);
-            setupStatus.textContent = 'PIN + Face ID saved ✓';
-            setTimeout(() => {
-                hideSetup();
-                startEnabledFlow();
-            }, 700);
-        } catch (err) {
-            setupStatus.textContent = 'Capture failed: ' + (err.message || err);
-            setupCaptureBtn.disabled = false;
-            setupCaptureBtn.textContent = '📸 Capture Face';
+          await new Promise(resolve => setTimeout(resolve, 500));
+          const detected = await detectDescriptor(setupVideo);
+          if (!detected) throw new Error('No face detected — try again.');
+          if (!detected.eyesOpen) throw new Error('Open your eyes and try again.');
+          storedDescriptor = detected.descriptor;
+          storedPin = pin;
+          saveDescriptor(storedDescriptor);
+          setupStatus.textContent = 'PIN + Face ID saved ✓';
+          setTimeout(async () => {
+            closeSetup();
+            if (!enabled) await startLock();
+          }, 700);
+        } catch (error) {
+          setupStatus.textContent = (error.message || 'Capture failed.');
+          setupBtn.disabled = false;
+          setupBtn.textContent = 'Capture Face ID';
         }
-    });
+      });
 
-    setupSkipFaceBtn.addEventListener('click', () => {
-        const pinVal = (setupPinInput.value || '').trim();
-        if (!/^\d{4,8}$/.test(pinVal)) {
-            setupStatus.textContent = 'Enter a 4–8 digit PIN first.';
-            return;
-        }
-        savePin(pinVal);
-        storedPin = pinVal;
-        storedDescriptor = null;
+      resetBtn.addEventListener('click', () => resetChoice.classList.add('active'));
+      document.getElementById('resetCancel').addEventListener('click', () => resetChoice.classList.remove('active'));
+
+      document.getElementById('resetFaceBtn').addEventListener('click', () => {
         localStorage.removeItem(FACE_KEY);
-        setupStatus.textContent = 'PIN saved. Face ID skipped.';
-        setTimeout(() => {
-            hideSetup();
-            startEnabledFlow();
-        }, 600);
-    });
+        storedDescriptor = null;
+        resetChoice.classList.remove('active');
+        setupStatus.textContent = 'Face ID cleared. PIN preserved.';
+      });
 
-    /* ============================================================
-       Camera permission prompt
-       ============================================================ */
-    async function requestCameraPermission() {
-        permissionNotice.style.display = 'none';
-        try {
-            const s = await getCamera();
-            s.getTracks().forEach(t => t.stop());
-            storedDescriptor = loadDescriptor();
-            storedPin = loadPin();
-            if (!storedDescriptor && !storedPin) showSetup();
-            else startEnabledFlow();
-        } catch (err) {
-            statusText.textContent = 'Camera permission denied. Use PIN.';
-            statusText.classList.add('error');
-            pinInput.focus();
+      document.getElementById('resetPinBtn').addEventListener('click', () => {
+        const next = prompt('Enter a new PIN (4–8 digits):');
+        if (next === null) return;
+        if (!/^\d{4,8}$/.test(next.trim())) { alert('PIN must be 4–8 digits.'); return; }
+        savePin(next.trim());
+        storedPin = next.trim();
+        setupPinInput.value = storedPin;
+        resetChoice.classList.remove('active');
+        setupStatus.textContent = 'PIN updated.';
+      });
+
+      document.getElementById('resetBothBtn').addEventListener('click', () => {
+        localStorage.removeItem(FACE_KEY);
+        localStorage.removeItem(PIN_KEY);
+        storedDescriptor = null;
+        storedPin = null;
+        setupPinInput.value = '';
+        resetChoice.classList.remove('active');
+        setupStatus.textContent = 'Face ID and PIN cleared.';
+      });
+
+      // PIN unlock
+      pinBtn.addEventListener('click', () => {
+        const entered = (pinInput.value || '').trim();
+        if (!storedPin) { pinError.textContent = 'No PIN set.'; return; }
+        if (entered === storedPin) {
+          disabledByPin = true;
+          unlockAnimation();
+        } else {
+          pinError.textContent = 'Incorrect PIN.';
+          pinInput.value = '';
+          pinInput.focus();
         }
-    }
-    grantCameraBtn.addEventListener('click', requestCameraPermission);
+      });
+      pinInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); pinBtn.click(); } });
 
-    /* ============================================================
-       Auto-relock on tab hide / visibility change
-       ============================================================ */
-    document.addEventListener('visibilitychange', () => {
-        if (!autoRelockOnHide || !enabled) return;
-
+      // visibility: pause camera when tab hidden, resume when visible
+      document.addEventListener('visibilitychange', async () => {
         if (document.visibilityState === 'hidden') {
-            if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
-            hiddenVideo.srcObject = null;
-            if (loopId) { cancelAnimationFrame(loopId); loopId = null; }
-            if (!locked) showLock();
-        } else if (document.visibilityState === 'visible') {
-            if (!stream && enabled && !setupMode) {
-                (async () => {
-                    try {
-                        const s = await getCamera();
-                        stream = s;
-                        hiddenVideo.srcObject = s;
-                        await hiddenVideo.play();
-                        if (!loopId) scanLoop();
-                    } catch (e) {
-                        statusText.textContent = 'Camera unavailable — use PIN.';
-                        statusText.classList.add('error');
-                    }
-                })();
-            }
-            if (locked) document.title = 'Chatify Lock';
+          if (stream) stream.getTracks().forEach(t => t.stop());
+          stream = null;
+          hiddenVideo.srcObject = null;
+          if (loopId) cancelAnimationFrame(loopId);
+          loopId = null;
+          if (enabled) showLock();
+        } else if (document.visibilityState === 'visible' && enabled && !stream) {
+          try {
+            stream = await getCamera();
+            hiddenVideo.srcObject = stream;
+            await hiddenVideo.play();
+            if (!loopId) scanLoop();
+          } catch (error) { console.warn(error); }
         }
-    });
+      });
 
-    window.addEventListener('blur', () => {
-        if (!setupMode && enabled && !locked) {
-            showLock();
-        }
-    });
+      // ---- auto-start: if nothing stored, show setup; else start lock ----
+      (async function init() {
+        // load faceapi in background
+        loadFaceApiScript().catch(() => {});
 
-    /* ============================================================
-       Initial boot
-       ============================================================ */
-    async function boot() {
         storedDescriptor = loadDescriptor();
         storedPin = loadPin();
 
-        if (!storedDescriptor && !storedPin) {
-            showSetup();
-            return;
+        if (!storedDescriptor || !storedPin) {
+          // no credentials – open setup immediately
+          await showSetup();
+        } else {
+          // already set up – start lock right away
+          await startLock();
         }
+      })();
 
-        try {
-            const s = await getCamera();
-            stream = s;
-            hiddenVideo.srcObject = s;
-            await hiddenVideo.play();
-            if (!faceApiReady) await loadFaceApiScript();
-            await loadModels();
-            showLock();
-            scanLoop();
-        } catch (err) {
-            const msg = (err && err.name === 'NotAllowedError')
-                ? 'Camera permission denied.'
-                : 'Camera error: ' + (err.message || err);
-            statusText.textContent = msg + ' Use your PIN below.';
-            statusText.classList.add('error');
-            lockSub.textContent = 'Face ID unavailable — enter your PIN.';
-            pinInput.focus();
-            permissionNotice.style.display = 'block';
+      // prevent leaving page easily (optional extra: beforeunload)
+      window.addEventListener('beforeunload', (e) => {
+        if (enabled && locked) {
+          e.preventDefault();
+          e.returnValue = 'Chatify Lock is active. Are you sure you want to leave?';
+          return e.returnValue;
         }
-    }
+      });
 
-    boot();
-
-    /* ============================================================
-       Prevent leaving the page easily
-       ============================================================ */
-    window.addEventListener('beforeunload', (e) => {
-        if (locked) {
-            e.preventDefault();
-            e.returnValue = 'The page is locked. Are you sure you want to leave?';
-            return e.returnValue;
-        }
-    });
-
-    document.addEventListener('keydown', (e) => {
-        if (locked && e.key === 'Tab') {
-            e.preventDefault();
-            pinInput.focus();
-        }
-    });
-
-    window.addEventListener('focus', () => {
-        if (locked) document.title = 'Chatify Lock';
-    });
-
-    /* ============================================================
-       Expose helpers for debugging
-       ============================================================ */
-    window.__chatifyLock = {
-        lock: showLock,
-        unlock: () => triggerUnlockAnimation(),
-        disable,
-        enable,
-        getState: () => ({ locked, enabled, hasFace: !!storedDescriptor, hasPin: !!storedPin })
-    };
-
-    console.log('🔒 Chatify Lock ready');
-})();
-</script>
+    })();
+  </script>
 </body>
 </html>
